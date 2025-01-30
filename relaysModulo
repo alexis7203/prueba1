@@ -1,0 +1,119 @@
+[
+   {
+       "id": "serial_repeater",
+       "type": "serial-port",
+       "serialport": "/dev/ttyUSB1",
+       "serialbaud": "9600",
+       "databits": "8",
+       "parity": "none",
+       "stopbits": "1",
+       "newline": "\\n",
+       "bin": "false",
+       "out": "char"
+   },
+   {
+       "id": "inject_set_rfcfg",
+       "type": "inject",
+       "name": "Set RF Configuration",
+       "props": [
+           {
+               "p": "payload"
+           },
+           {
+               "p": "topic",
+               "vt": "str"
+           }
+       ],
+       "repeat": "",
+       "crontab": "",
+       "once": true,
+       "onceDelay": 0.1,
+       "topic": "",
+       "payload": "AT+TEST=RFCFG,915,SF8,500,10,12,22,ON,OFF,OFF",
+       "payloadType": "str",
+       "x": 200,
+       "y": 100,
+       "wires": [
+           [
+               "serial_out_repeater"
+           ]
+       ]
+   },
+   {
+       "id": "serial_out_repeater",
+       "type": "serial out",
+       "name": "Serial Out Repeater",
+       "serial": "serial_repeater",
+       "x": 400,
+       "y": 100,
+       "wires": []
+   },
+   {
+       "id": "serial_in_repeater",
+       "type": "serial in",
+       "name": "Serial In Repeater",
+       "serial": "serial_repeater",
+       "x": 200,
+       "y": 220,
+       "wires": [
+           [
+               "function_filter_retransmit"
+           ]
+       ]
+   },
+   {
+       "id": "function_filter_retransmit",
+       "type": "function",
+       "name": "Filter and Retransmit",
+       "func": "// Filtrar el mensaje para obtener la parte entre comillas\nvar message = msg.payload;\nvar matches = message.match(/\"([^\"]*)\"/);\nif (matches && matches[1]) {\n    // Poner en modo TX\n    var txMessage = {payload: \"AT+TEST=TXLRPKT,\" + matches[1]};\n    node.send([txMessage, null]);\n    // Poner en modo RX después de transmitir\n    var rxMessage = {payload: \"AT+TEST=RXLRPKT\"};\n    node.send([null, rxMessage]);\n} else {\n    // Si no hay comillas en el mensaje, no hacer nada\n    return null;\n}",
+       "outputs": 2,
+       "noerr": 0,
+       "x": 400,
+       "y": 220,
+       "wires": [
+           [
+               "serial_out_repeater"
+           ],
+           [
+               "delay_rx",
+               "debug_repeater"
+           ]
+       ]
+   },
+   {
+       "id": "delay_rx",
+       "type": "delay",
+       "name": "Delay RX",
+       "pauseType": "delay",
+       "timeout": "1",
+       "timeoutUnits": "seconds",
+       "rate": "1",
+       "rateUnits": "second",
+       "randomFirst": "1",
+       "randomLast": "5",
+       "randomUnits": "seconds",
+       "drop": false,
+       "x": 600,
+       "y": 220,
+       "wires": [
+           [
+               "serial_out_repeater"
+           ]
+       ]
+   },
+   {
+       "id": "debug_repeater",
+       "type": "debug",
+       "name": "Debug Repeater",
+       "active": true,
+       "tosidebar": true,
+       "console": false,
+       "tostatus": false,
+       "complete": "false",
+       "statusVal": "",
+       "statusType": "auto",
+       "x": 800,
+       "y": 220,
+       "wires": []
+   }
+]
